@@ -6,3 +6,4 @@ seaborn
 scikit-learn
 graphviz
 pydotplus
+pillow
