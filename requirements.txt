@@ -1,9 +1,9 @@
 streamlit
 pandas
 numpy
-matplotlib
-seaborn
 scikit-learn
-graphviz
+seaborn
+matplotlib
 pydotplus
-pillow
+Pillow
+graphviz
