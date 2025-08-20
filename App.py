@@ -1,131 +1,131 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
 from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier, export_graphviz
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-import graphviz
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+import seaborn as sns
+import matplotlib.pyplot as plt
 import pydotplus
 from PIL import Image
 import io
 
-# ===========================
-# 🎀 Configuración inicial
-# ===========================
-st.set_page_config(page_title="Clasificación con ML", page_icon="🌸", layout="wide")
-st.title("🌸 Clasificación Interactiva con ML 🌸")
-st.markdown("Experimenta con **KNN** y **Árbol de Decisión**, visualiza datos y explora el árbol 🌳✨")
+# 🎀 Estilo
+st.set_page_config(page_title="EDA + Modelos IA", layout="wide")
+st.markdown("<h1 style='text-align:center; color:#e75480;'>🌸 Machine Learning Girly App 🌸</h1>", unsafe_allow_html=True)
 
-# ===========================
-# 🎲 Generar dataset simulado
-# ===========================
+# ================================
+# Generación de datos simulados
+# ================================
 X, y = make_classification(
-    n_samples=300, n_features=6, n_informative=4, n_classes=3,
-    n_clusters_per_class=1, random_state=42
+    n_samples=300, n_features=6, n_informative=4, 
+    n_redundant=0, n_classes=3, random_state=42
 )
-X = pd.DataFrame(X, columns=[f"Feature_{i}" for i in range(1, 7)])
-y = pd.Series(y, name="Target")
 
-# ===========================
-# 🎨 Sidebar - Parámetros
-# ===========================
-st.sidebar.header("⚙️ Parámetros del modelo")
-test_size = st.sidebar.slider("Tamaño del test (%)", 10, 50, 20, step=5) / 100
+df = pd.DataFrame(X, columns=[f"feature_{i}" for i in range(1, 7)])
+df["target"] = y
 
-# KNN
-st.sidebar.subheader("KNN")
-n_neighbors = st.sidebar.slider("Número de vecinos (k)", 1, 15, 5)
+# ================================
+# Sidebar dinámico
+# ================================
+st.sidebar.header("⚙️ Parámetros")
 
-# Árbol
-st.sidebar.subheader("Árbol de Decisión")
+test_size = st.sidebar.slider("Proporción de test", 0.1, 0.5, 0.3, step=0.05)
+
+# Parámetros KNN
+st.sidebar.subheader("🔮 KNN")
+n_neighbors = st.sidebar.slider("Número de vecinos", 1, 15, 5)
+
+# Parámetros Árbol
+st.sidebar.subheader("🌳 Árbol de Decisión")
 max_depth = st.sidebar.slider("Profundidad máxima", 1, 10, 3)
-criterion = st.sidebar.selectbox("Criterio", ["gini", "entropy"])
+criterion = st.sidebar.selectbox("Criterio", ["gini", "entropy", "log_loss"])
 
-# ===========================
-# 📊 Separar dataset
-# ===========================
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+# ================================
+# Split
+# ================================
+X_train, X_test, y_train, y_test = train_test_split(df.drop("target", axis=1), df["target"], test_size=test_size, random_state=42)
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 
-# ===========================
-# 🤖 Entrenamiento de modelos
-# ===========================
-models = {
-    "KNN": KNeighborsClassifier(n_neighbors=n_neighbors),
-    "Árbol de Decisión": DecisionTreeClassifier(max_depth=max_depth, criterion=criterion, random_state=42)
-}
+# ================================
+# Tabs
+# ================================
+tab1, tab2, tab3, tab4 = st.tabs(["📊 EDA", "🤖 Modelos", "🌳 Árbol Visual", "📈 Métricas"])
 
-results = {}
-for name, model in models.items():
-    model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
-    results[name] = {
-        "modelo": model,
-        "accuracy": accuracy_score(y_test, y_pred),
-        "report": classification_report(y_test, y_pred, output_dict=True),
-        "confusion": confusion_matrix(y_test, y_pred)
-    }
-
-# ===========================
-# 📌 Tabs
-# ===========================
-tab1, tab2, tab3 = st.tabs(["📊 EDA", "🤖 Modelos", "🌳 Árbol de Decisión"])
-
-# ----------- TAB 1 EDA -----------
+# ================================
+# EDA
+# ================================
 with tab1:
-    st.subheader("🔍 Exploratory Data Analysis")
-    st.write("Primeras filas del dataset:")
-    st.dataframe(pd.concat([X, y], axis=1).head())
+    st.subheader("📊 Exploratory Data Analysis")
+    st.dataframe(df.head())
 
-    # Distribución de clases
+    st.markdown("### Distribución de Clases")
     fig, ax = plt.subplots()
-    sns.countplot(x=y, palette="pastel", ax=ax)
-    ax.set_title("Distribución de Clases")
+    sns.countplot(x="target", data=df, palette="pastel", ax=ax)
     st.pyplot(fig)
 
-    # Correlaciones
-    fig, ax = plt.subplots(figsize=(8, 6))
-    sns.heatmap(X.corr(), annot=True, cmap="coolwarm", ax=ax)
-    ax.set_title("Mapa de Correlación")
+    st.markdown("### Heatmap de Correlaciones")
+    fig, ax = plt.subplots(figsize=(6,4))
+    sns.heatmap(df.corr(), annot=True, cmap="coolwarm", ax=ax)
     st.pyplot(fig)
 
-# ----------- TAB 2 MODELOS -----------
+# ================================
+# Modelos
+# ================================
+resultados = {}
+
 with tab2:
-    st.subheader("📈 Resultados de Modelos")
-    for name, result in results.items():
-        st.markdown(f"### {name}")
-        st.write(f"**Accuracy:** {result['accuracy']:.2f}")
+    # KNN
+    knn = KNeighborsClassifier(n_neighbors=n_neighbors)
+    knn.fit(X_train, y_train)
+    y_pred_knn = knn.predict(X_test)
+    resultados["KNN"] = accuracy_score(y_test, y_pred_knn)
 
-        # Reporte
-        st.write("Reporte de Clasificación:")
-        st.json(result["report"])
+    # Árbol
+    tree = DecisionTreeClassifier(max_depth=max_depth, criterion=criterion, random_state=42)
+    tree.fit(X_train, y_train)
+    y_pred_tree = tree.predict(X_test)
+    resultados["Árbol"] = accuracy_score(y_test, y_pred_tree)
 
-        # Matriz de confusión
-        fig, ax = plt.subplots()
-        sns.heatmap(result["confusion"], annot=True, fmt="d", cmap="pink", cbar=False, ax=ax)
-        ax.set_title(f"Matriz de Confusión - {name}")
-        st.pyplot(fig)
+    st.subheader("📊 Resultados")
+    for modelo, acc in resultados.items():
+        st.markdown(f"**{modelo}:** {acc:.2f}")
 
-# ----------- TAB 3 ÁRBOL -----------
+# ================================
+# Árbol de Decisión Gráfico
+# ================================
 with tab3:
     st.subheader("🌳 Visualización del Árbol de Decisión")
-
+    
     dot_data = export_graphviz(
-        results["Árbol de Decisión"]["modelo"],
+        tree,
         out_file=None,
-        feature_names=X.columns,
+        feature_names=[f"feature_{i}" for i in range(1, 7)],
         class_names=[str(c) for c in np.unique(y)],
         filled=True,
         rounded=True,
         special_characters=True
     )
-
-    # Convertir a imagen con pydotplus
+    
     graph = pydotplus.graph_from_dot_data(dot_data)
     png_bytes = graph.create_png()
     image = Image.open(io.BytesIO(png_bytes))
+    st.image(image, caption="Árbol de Decisión", use_container_width=True)
 
-    st.image(image, caption="Árbol de Decisión con Nodos y Ramas 🌸", use_container_width=True)
+# ================================
+# Métricas
+# ================================
+with tab4:
+    st.subheader("📈 Reporte de Clasificación - Árbol de Decisión")
+    report = classification_report(y_test, y_pred_tree, output_dict=True)
+    st.dataframe(pd.DataFrame(report).transpose())
+
+    st.subheader("📈 Matriz de Confusión")
+    fig, ax = plt.subplots()
+    sns.heatmap(confusion_matrix(y_test, y_pred_tree), annot=True, fmt="d", cmap="Purples", ax=ax)
+    st.pyplot(fig)
