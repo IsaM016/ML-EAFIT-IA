@@ -5,28 +5,14 @@ from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.tree import DecisionTreeClassifier, plot_tree # Importamos plot_tree
+from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 import seaborn as sns
 import matplotlib.pyplot as plt
-import pydotplus
-from PIL import Image
-import io
 
 # 🎀 Estilo
 st.set_page_config(page_title="EDA + Modelos IA", layout="wide")
 st.markdown("<h1 style='text-align:center; color:#e75480;'>🌸 Machine Learning Girly App 🌸</h1>", unsafe_allow_html=True)
-
-# ================================
-# Generación de datos simulados
-# ================================
-X, y = make_classification(
-    n_samples=300, n_features=6, n_informative=4, 
-    n_redundant=0, n_classes=3, random_state=42
-)
-
-df = pd.DataFrame(X, columns=[f"feature_{i}" for i in range(1, 7)])
-df["target"] = y
 
 # ================================
 # Sidebar dinámico
@@ -45,9 +31,50 @@ max_depth = st.sidebar.slider("Profundidad máxima", 1, 10, 3)
 criterion = st.sidebar.selectbox("Criterio", ["gini", "entropy", "log_loss"])
 
 # ================================
+# Lógica de Carga de Datos (Nueva)
+# ================================
+st.subheader("📁 Cargar tu propio archivo CSV")
+uploaded_file = st.file_uploader("Sube un archivo CSV", type="csv")
+
+if uploaded_file is not None:
+    # Leer el archivo CSV si se subió uno
+    df = pd.read_csv(uploaded_file)
+    st.success("✅ ¡Archivo cargado exitosamente!")
+else:
+    # Generación de datos simulados si no hay archivo
+    st.info("ℹ️ No se ha subido ningún archivo. Se usarán datos simulados.")
+    X, y = make_classification(
+        n_samples=300, n_features=6, n_informative=4, 
+        n_redundant=0, n_classes=3, random_state=42
+    )
+    df = pd.DataFrame(X, columns=[f"feature_{i}" for i in range(1, 7)])
+    df["target"] = y
+
+# ================================
+# Selección de la columna Target
+# ================================
+st.markdown("---")
+st.subheader("🎯 Seleccionar la columna objetivo (Target)")
+if "target" in df.columns:
+    target_column = st.selectbox(
+        "Elige la columna que deseas predecir:",
+        options=df.columns,
+        index=df.columns.get_loc("target")
+    )
+else:
+    target_column = st.selectbox(
+        "Elige la columna que deseas predecir:",
+        options=df.columns
+    )
+
+# ================================
 # Split
 # ================================
-X_train, X_test, y_train, y_test = train_test_split(df.drop("target", axis=1), df["target"], test_size=test_size, random_state=42)
+X = df.drop(columns=[target_column])
+y = df[target_column]
+feature_names = X.columns.tolist()
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
 scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
@@ -66,7 +93,7 @@ with tab1:
 
     st.markdown("### Distribución de Clases")
     fig, ax = plt.subplots()
-    sns.countplot(x="target", data=df, palette="pastel", ax=ax)
+    sns.countplot(x=target_column, data=df, palette="pastel", ax=ax)
     st.pyplot(fig)
 
     st.markdown("### Heatmap de Correlaciones")
@@ -102,20 +129,17 @@ with tab2:
 with tab3:
     st.subheader("🌳 Visualización del Árbol de Decisión")
     
-    # Creamos una figura de matplotlib para el gráfico
     fig, ax = plt.subplots(figsize=(20, 10))
     
-    # Usamos plot_tree para dibujar el árbol directamente en la figura
     plot_tree(
         tree,
         filled=True,
-        feature_names=[f"feature_{i}" for i in range(1, 7)],
+        feature_names=feature_names, # Se usa la lista de nombres de las características
         class_names=[str(c) for c in np.unique(y)],
         rounded=True,
-        ax=ax # Pasamos el objeto ax para que dibuje en la figura creada
+        ax=ax
     )
     
-    # Usamos st.pyplot para mostrar la figura en Streamlit
     st.pyplot(fig)
 
 # ================================
