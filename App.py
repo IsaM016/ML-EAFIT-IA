@@ -5,7 +5,7 @@ from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.tree import DecisionTreeClassifier, plot_tree # Importamos plot_tree
+from sklearn.tree import DecisionTreeClassifier, export_graphviz
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -99,19 +99,23 @@ with tab2:
 # ================================
 # Árbol de Decisión Gráfico
 # ================================
-with tab3: 
+with tab3:
     st.subheader("🌳 Visualización del Árbol de Decisión")
-
-    fig, ax = plt.subplots(figsize=(20, 10))
-    plot_tree(
+    
+    dot_data = export_graphviz(
         tree,
-        filled=True,
+        out_file=None,
         feature_names=[f"feature_{i}" for i in range(1, 7)],
         class_names=[str(c) for c in np.unique(y)],
+        filled=True,
         rounded=True,
-        ax=ax
+        special_characters=True
     )
-    st.pyplot(fig)
+    
+    graph = pydotplus.graph_from_dot_data(dot_data)
+    png_bytes = graph.create_png()
+    image = Image.open(io.BytesIO(png_bytes))
+    st.image(image, caption="Árbol de Decisión", use_container_width=True)
 
 # ================================
 # Métricas
