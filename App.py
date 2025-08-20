@@ -99,23 +99,18 @@ with tab2:
 # ================================
 # Árbol de Decisión Gráfico
 # ================================
-with tab3:
+with tab3: 
     st.subheader("🌳 Visualización del Árbol de Decisión")
-    
-    # Creamos una figura de matplotlib para el gráfico
+
     fig, ax = plt.subplots(figsize=(20, 10))
-    
-    # Usamos plot_tree para dibujar el árbol directamente en la figura
     plot_tree(
         tree,
         filled=True,
         feature_names=[f"feature_{i}" for i in range(1, 7)],
         class_names=[str(c) for c in np.unique(y)],
         rounded=True,
-        ax=ax # Pasamos el objeto ax para que dibuje en la figura creada
+        ax=ax
     )
-    
-    # Usamos st.pyplot para mostrar la figura en Streamlit
     st.pyplot(fig)
 
 # ================================
